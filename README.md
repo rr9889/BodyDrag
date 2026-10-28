@@ -1,5 +1,7 @@
 # BodyDrag for The Saboteur
 
+![BodyDrag in-game](docs/preview.jpg)
+
 Pick up knocked-out or dead soldiers, drag them by the shoulders and put them down again to hide bodies from
 patrols. F7 picks up / puts down, WASD drags. Requires the GOG release of The Saboteur and Ultimate ASI Loader.
 See [`installer/README.txt`](installer/README.txt) for full install, settings and uninstall instructions.
