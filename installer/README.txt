@@ -1,4 +1,4 @@
-BODY DRAG for The Saboteur - version 1.0.0
+BODY DRAG for The Saboteur - version 1.1.0
 ==========================================
 
 Sean can pick up knocked-out or dead soldiers, drag them by the shoulders, and put them down again - to hide bodies
@@ -20,6 +20,19 @@ REQUIREMENTS
   2. Ultimate ASI Loader by ThirteenAG (dinput8.dll in the game folder) - NOT included, install it first.
      If you already use another ASI mod or Fusion Fix, you most likely have it already.
   3. The game's original DLC\01\Animations.pack (present in the GOG release). The installer checks it.
+
+CHANGES
+-------
+  1.1.0  Fixes the frame-rate drop and stutter while a body is carried. The plugin checked memory with a slow Windows
+         call before every single read (thousands per frame); it now checks each memory region once per frame. In a
+         test session the plugin's cost while carrying fell from about 22 ms to about 1 ms per frame.
+         Animations, controls and settings are unchanged.
+  1.0.0  First release.
+
+UPGRADING FROM 1.0.0
+--------------------
+  Close the game, extract this archive over the old BodyDrag folder and run  BodyDrag\Install BodyDrag.bat  again.
+  It sees the animations are already installed and only replaces scripts\sab_asi.asi.
 
 INSTALL
 -------

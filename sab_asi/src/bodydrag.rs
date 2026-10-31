@@ -323,21 +323,48 @@ struct MemInfo {
     kind: u32,
 }
 
+/// VirtualQuery answers (region base, end, state, protect) for the current frame. A 32-bit game runs VirtualQuery
+/// through WOW64 (a kernel call per query); the carry and ragdoll hooks read thousands of fields per frame, so one
+/// query per region per frame replaces one per read. The cache is emptied whenever FRAME changes.
+struct RegionCache {
+    frame: u32,
+    regions: Vec<(usize, usize, u32, u32)>,
+}
+static REGIONS: Mutex<RegionCache> = Mutex::new(RegionCache { frame: u32::MAX, regions: Vec::new() });
+const REGION_CACHE_MAX: usize = 256;
+
+fn region(p: u32) -> Option<(usize, usize, u32, u32)> {
+    let frame = FRAME.load(Ordering::Relaxed);
+    let mut c = REGIONS.lock().unwrap_or_else(|e| e.into_inner());
+    if c.frame != frame {
+        c.frame = frame;
+        c.regions.clear();
+    }
+    let a = p as usize;
+    if let Some(r) = c.regions.iter().find(|r| r.0 <= a && a < r.1) {
+        return Some(*r);
+    }
+    let mut mi: MemInfo = unsafe { core::mem::zeroed() };
+    if unsafe { VirtualQuery(p as *const c_void, &mut mi, core::mem::size_of::<MemInfo>()) } == 0 {
+        return None;
+    }
+    let r = (mi.base, mi.base + mi.region_size, mi.state, mi.protect);
+    if c.regions.len() >= REGION_CACHE_MAX {
+        c.regions.clear();
+    }
+    c.regions.push(r);
+    Some(r)
+}
+
 /// True if `[p, p+len)` is committed, readable memory (no guard / no-access page).
 fn readable(p: u32, len: usize) -> bool {
     if p < 0x10000 {
         return false;
     }
-    let mut mi: MemInfo = unsafe { core::mem::zeroed() };
-    if unsafe { VirtualQuery(p as *const c_void, &mut mi, core::mem::size_of::<MemInfo>()) } == 0 {
-        return false;
-    }
+    let Some((_, end, state, protect)) = region(p) else { return false };
     const MEM_COMMIT: u32 = 0x1000;
     const READ_MASK: u32 = 0x02 | 0x04 | 0x08 | 0x20 | 0x40 | 0x80;
-    mi.state == MEM_COMMIT
-        && mi.protect & READ_MASK != 0
-        && mi.protect & 0x100 == 0
-        && (p as usize + len) <= mi.base + mi.region_size
+    state == MEM_COMMIT && protect & READ_MASK != 0 && protect & 0x100 == 0 && (p as usize + len) <= end
 }
 
 unsafe fn r32(p: u32) -> Option<u32> {

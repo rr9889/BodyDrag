@@ -6,8 +6,7 @@
 //! Everything here runs on the game thread: `before_update` / `after_update` inside the ragdoll-update detour
 //! (FUN_00590db0), `poll` / `set_retained` from the game-camera tick.
 
-use super::{clock, human_pos, r32, r8, ragdoll_bone_names, readable, rvec, skeleton_bone_names, MemInfo, VirtualQuery, FRAME};
-use core::ffi::c_void;
+use super::{clock, human_pos, r32, r8, ragdoll_bone_names, readable, region, rvec, skeleton_bone_names, FRAME};
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 
@@ -122,12 +121,8 @@ fn writable(p: u32, len: usize) -> bool {
     if !readable(p, len) {
         return false;
     }
-    let mut mi: MemInfo = unsafe { core::mem::zeroed() };
-    if unsafe { VirtualQuery(p as *const c_void, &mut mi, core::mem::size_of::<MemInfo>()) } == 0 {
-        return false;
-    }
     const WRITE_MASK: u32 = 0x04 | 0x08 | 0x40 | 0x80;
-    mi.protect & WRITE_MASK != 0
+    region(p).is_some_and(|(_, _, _, protect)| protect & WRITE_MASK != 0)
 }
 
 unsafe fn wf32(p: u32, v: f32) -> bool {
